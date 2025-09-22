@@ -1,25 +1,69 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/mydb
+    url: jdbc:postgresql://localhost:5433/mydb
     username: omer
     password: Blabla123
     driver-class-name: org.postgresql.Driver
 
   jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: create-drop  # Creates tables on startup, drops on shutdown
     show-sql: true
     properties:
       hibernate:
         format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
 
   application:
     name: todo-backend
 
+  # Security configuration
+  security:
+    require-ssl: false
+
 server:
   port: 8080
+  error:
+    include-message: always
+    include-binding-errors: always
 
+# JWT Configuration
+jwt:
+  secret: myVerySecureSecretKeyForJWT1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
+  expiration: 86400000  # 24 hours in milliseconds
+
+# Logging configuration
 logging:
   level:
     com.todoapp: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web.cors: DEBUG
+    root: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Management endpoints (for health checks, metrics)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# Application-specific configuration
+app:
+  cors:
+    allowed-origins:
+      - http://localhost:3000
+      - http://localhost:5173
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+
+  # Default admin user (will be created on startup if not exists)
+  admin:
+    email: admin@todoapp.com
+    password: admin123
+    name: Admin User

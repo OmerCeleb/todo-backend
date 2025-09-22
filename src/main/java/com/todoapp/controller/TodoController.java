@@ -1,22 +1,30 @@
+// src/main/java/com/todoapp/controller/TodoController.java
 package com.todoapp.controller;
 
 import com.todoapp.dto.TodoRequestDTO;
 import com.todoapp.dto.TodoResponseDTO;
 import com.todoapp.dto.TodoStatsDTO;
 import com.todoapp.entity.Todo;
+import com.todoapp.entity.User;
 import com.todoapp.service.TodoService;
+import com.todoapp.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
- * REST Controller for Todo API endpoints.
+ * REST Controller for Todo API endpoints with user authentication.
  * Handles HTTP requests and delegates business logic to TodoService.
+ * All operations are now user-specific based on JWT authentication.
  */
 @RestController
 @RequestMapping("/api/todos")
@@ -24,187 +32,297 @@ import java.util.Optional;
 public class TodoController {
 
     private final TodoService todoService;
+    private final UserService userService;
 
-    /**
-     * Constructor with dependency injection
-     * @param todoService Service layer for business logic
-     */
     @Autowired
-    public TodoController(TodoService todoService) {
+    public TodoController(TodoService todoService, UserService userService) {
         this.todoService = todoService;
+        this.userService = userService;
     }
 
     /**
-     * Get all todos with optional filtering
+     * Get current authenticated user
+     * @return Current user or null if not authenticated
+     */
+    private User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+
+        String email = authentication.getName();
+        Optional<User> userOpt = userService.findActiveUserByEmail(email);
+        return userOpt.orElse(null);
+    }
+
+    /**
+     * Get all todos for the authenticated user with optional filtering
      * @param completed Filter by completion status (optional)
      * @param priority Filter by priority level (optional)
      * @param category Filter by category (optional)
      * @param search Search in title/description (optional)
-     * @return List of todos matching criteria
+     * @return List of user's todos matching criteria
      */
     @GetMapping
-    public ResponseEntity<List<TodoResponseDTO>> getAllTodos(
+    public ResponseEntity<?> getAllUserTodos(
             @RequestParam(required = false) Boolean completed,
             @RequestParam(required = false) Todo.Priority priority,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String search) {
 
-        List<TodoResponseDTO> todos;
+        try {
+            User currentUser = getCurrentUser();
+            if (currentUser == null) {
+                Map<String, String> error = new HashMap<>();
+                error.put("message", "User not authenticated");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+            }
 
-        if (search != null && !search.trim().isEmpty()) {
-            todos = todoService.searchTodos(search);
-        } else if (completed != null || priority != null || category != null) {
-            todos = todoService.getFilteredTodos(completed, priority, category);
-        } else {
-            todos = todoService.getAllTodos();
+            List<TodoResponseDTO> todos = todoService.getUserTodos(
+                    currentUser.getId(), completed, priority, category, search
+            );
+
+            return ResponseEntity.ok(todos);
+
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Failed to fetch todos: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
-
-        return ResponseEntity.ok(todos);
     }
 
     /**
-     * Get todo by ID
+     * Get a specific todo by ID (must belong to authenticated user)
      * @param id Todo ID
-     * @return Todo if found, 404 if not found
+     * @return Todo details
      */
     @GetMapping("/{id}")
-    public ResponseEntity<TodoResponseDTO> getTodoById(@PathVariable Long id) {
-        Optional<TodoResponseDTO> todo = todoService.getTodoById(id);
-        return todo.map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<?> getTodoById(@PathVariable Long id) {
+        try {
+            User currentUser = getCurrentUser();
+            if (currentUser == null) {
+                Map<String, String> error = new HashMap<>();
+                error.put("message", "User not authenticated");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+            }
+
+            Optional<TodoResponseDTO> todo = todoService.getUserTodoById(currentUser.getId(), id);
+            if (todo.isEmpty()) {
+                Map<String, String> error = new HashMap<>();
+                error.put("message", "Todo not found");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+            }
+
+            return ResponseEntity.ok(todo.get());
+
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Failed to fetch todo: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
     }
 
-
-
     /**
-     * Create a new todo
-     * @param todoRequest Request DTO with todo data
-     * @return Created todo with 201 status
+     * Create a new todo for the authenticated user
+     * @param todoRequest Todo data
+     * @return Created todo
      */
     @PostMapping
-    public ResponseEntity<TodoResponseDTO> createTodo(@Valid @RequestBody TodoRequestDTO todoRequest) {
-        TodoResponseDTO createdTodo = todoService.createTodo(todoRequest);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdTodo);
+    public ResponseEntity<?> createTodo(@Valid @RequestBody TodoRequestDTO todoRequest) {
+        try {
+            User currentUser = getCurrentUser();
+            if (currentUser == null) {
+                Map<String, String> error = new HashMap<>();
+                error.put("message", "User not authenticated");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+            }
+
+            TodoResponseDTO createdTodo = todoService.createTodoForUser(currentUser.getId(), todoRequest);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdTodo);
+
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Failed to create todo: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
     }
 
     /**
-     * Update an existing todo
-     * @param id Todo ID to update
-     * @param todoRequest Request DTO with updated data
-     * @return Updated todo if found, 404 if not found
+     * Update an existing todo (must belong to authenticated user)
+     * @param id Todo ID
+     * @param todoRequest Updated todo data
+     * @return Updated todo
      */
     @PutMapping("/{id}")
-    public ResponseEntity<TodoResponseDTO> updateTodo(
-            @PathVariable Long id,
-            @Valid @RequestBody TodoRequestDTO todoRequest) {
+    public ResponseEntity<?> updateTodo(@PathVariable Long id,
+                                        @Valid @RequestBody TodoRequestDTO todoRequest) {
+        try {
+            User currentUser = getCurrentUser();
+            if (currentUser == null) {
+                Map<String, String> error = new HashMap<>();
+                error.put("message", "User not authenticated");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+            }
 
-        Optional<TodoResponseDTO> updatedTodo = todoService.updateTodo(id, todoRequest);
-        return updatedTodo.map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+            Optional<TodoResponseDTO> updatedTodo = todoService.updateUserTodo(
+                    currentUser.getId(), id, todoRequest
+            );
+
+            if (updatedTodo.isEmpty()) {
+                Map<String, String> error = new HashMap<>();
+                error.put("message", "Todo not found or access denied");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+            }
+
+            return ResponseEntity.ok(updatedTodo.get());
+
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Failed to update todo: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    /**
+     * Delete a todo (must belong to authenticated user)
+     * @param id Todo ID
+     * @return Success message
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteTodo(@PathVariable Long id) {
+        try {
+            User currentUser = getCurrentUser();
+            if (currentUser == null) {
+                Map<String, String> error = new HashMap<>();
+                error.put("message", "User not authenticated");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+            }
+
+            boolean deleted = todoService.deleteUserTodo(currentUser.getId(), id);
+            if (!deleted) {
+                Map<String, String> error = new HashMap<>();
+                error.put("message", "Todo not found or access denied");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+            }
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Todo deleted successfully");
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Failed to delete todo: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
     }
 
     /**
      * Toggle todo completion status
-     * @param id Todo ID to toggle
-     * @return Updated todo if found, 404 if not found
+     * @param id Todo ID
+     * @return Updated todo
      */
     @PatchMapping("/{id}/toggle")
-    public ResponseEntity<TodoResponseDTO> toggleTodo(@PathVariable Long id) {
-        Optional<TodoResponseDTO> toggledTodo = todoService.toggleTodo(id);
-        return toggledTodo.map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<?> toggleTodoCompletion(@PathVariable Long id) {
+        try {
+            User currentUser = getCurrentUser();
+            if (currentUser == null) {
+                Map<String, String> error = new HashMap<>();
+                error.put("message", "User not authenticated");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+            }
+
+            Optional<TodoResponseDTO> updatedTodo = todoService.toggleUserTodoCompletion(
+                    currentUser.getId(), id
+            );
+
+            if (updatedTodo.isEmpty()) {
+                Map<String, String> error = new HashMap<>();
+                error.put("message", "Todo not found or access denied");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+            }
+
+            return ResponseEntity.ok(updatedTodo.get());
+
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Failed to toggle todo: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
     }
 
     /**
-     * Delete a todo
-     * @param id Todo ID to delete
-     * @return 204 if deleted, 404 if not found
-     */
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteTodo(@PathVariable Long id) {
-        boolean deleted = todoService.deleteTodo(id);
-        return deleted ? ResponseEntity.noContent().build()
-                : ResponseEntity.notFound().build();
-    }
-
-    /**
-     * Bulk delete multiple todos
-     * @param ids List of todo IDs to delete
-     * @return 204 No Content
-     */
-    @DeleteMapping("/bulk")
-    public ResponseEntity<Void> bulkDeleteTodos(@RequestBody List<Long> ids) {
-        todoService.bulkDeleteTodos(ids);
-        return ResponseEntity.noContent().build();
-    }
-
-    /**
-     * Get todo statistics
-     * @return Statistics about todos (total, completed, active, overdue)
+     * Get todo statistics for the authenticated user
+     * @return Todo statistics
      */
     @GetMapping("/stats")
-    public ResponseEntity<TodoStatsDTO> getTodoStats() {
-        TodoStatsDTO stats = todoService.getTodoStats();
-        return ResponseEntity.ok(stats);
+    public ResponseEntity<?> getUserTodoStats() {
+        try {
+            User currentUser = getCurrentUser();
+            if (currentUser == null) {
+                Map<String, String> error = new HashMap<>();
+                error.put("message", "User not authenticated");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+            }
+
+            TodoStatsDTO stats = todoService.getUserTodoStats(currentUser.getId());
+            return ResponseEntity.ok(stats);
+
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Failed to fetch stats: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
     }
 
     /**
-     * Get all unique categories
-     * @return List of all categories used in todos
-     */
-    @GetMapping("/categories")
-    public ResponseEntity<List<String>> getAllCategories() {
-        List<String> categories = todoService.getAllCategories();
-        return ResponseEntity.ok(categories);
-    }
-
-    /**
-     * Get overdue todos
-     * @return List of todos that are past their due date and not completed
+     * Get user's overdue todos
+     * @return List of overdue todos
      */
     @GetMapping("/overdue")
-    public ResponseEntity<List<TodoResponseDTO>> getOverdueTodos() {
-        List<TodoResponseDTO> overdueTodos = todoService.getOverdueTodos();
-        return ResponseEntity.ok(overdueTodos);
+    public ResponseEntity<?> getOverdueTodos() {
+        try {
+            User currentUser = getCurrentUser();
+            if (currentUser == null) {
+                Map<String, String> error = new HashMap<>();
+                error.put("message", "User not authenticated");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+            }
+
+            List<TodoResponseDTO> overdueTodos = todoService.getUserOverdueTodos(currentUser.getId());
+            return ResponseEntity.ok(overdueTodos);
+
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Failed to fetch overdue todos: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
     }
 
     /**
-     * Get todos due today
-     * @return List of todos due today
+     * Bulk delete completed todos
+     * @return Number of deleted todos
      */
-    @GetMapping("/due-today")
-    public ResponseEntity<List<TodoResponseDTO>> getTodosDueToday() {
-        List<TodoResponseDTO> todosDueToday = todoService.getTodosDueToday();
-        return ResponseEntity.ok(todosDueToday);
-    }
+    @DeleteMapping("/completed")
+    public ResponseEntity<?> deleteCompletedTodos() {
+        try {
+            User currentUser = getCurrentUser();
+            if (currentUser == null) {
+                Map<String, String> error = new HashMap<>();
+                error.put("message", "User not authenticated");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+            }
 
-    /**
-     * Get active todos sorted by priority and due date
-     * @return List of incomplete todos ordered by importance
-     */
-    @GetMapping("/priority-sorted")
-    public ResponseEntity<List<TodoResponseDTO>> getActiveTodosOrderedByPriority() {
-        List<TodoResponseDTO> sortedTodos = todoService.getActiveTodosOrderedByPriority();
-        return ResponseEntity.ok(sortedTodos);
-    }
+            int deletedCount = todoService.deleteUserCompletedTodos(currentUser.getId());
 
-    /**
-     * Get completed todos
-     * @return List of completed todos
-     */
-    @GetMapping("/completed")
-    public ResponseEntity<List<TodoResponseDTO>> getCompletedTodos() {
-        List<TodoResponseDTO> completedTodos = todoService.getTodosByCompleted(true);
-        return ResponseEntity.ok(completedTodos);
-    }
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Completed todos deleted successfully");
+            response.put("deletedCount", deletedCount);
+            return ResponseEntity.ok(response);
 
-    /**
-     * Get active (incomplete) todos
-     * @return List of active todos
-     */
-    @GetMapping("/active")
-    public ResponseEntity<List<TodoResponseDTO>> getActiveTodos() {
-        List<TodoResponseDTO> activeTodos = todoService.getTodosByCompleted(false);
-        return ResponseEntity.ok(activeTodos);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Failed to delete completed todos: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
     }
 }

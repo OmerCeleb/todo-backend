@@ -1,3 +1,4 @@
+// src/main/java/com/todoapp/dto/TodoResponseDTO.java
 package com.todoapp.dto;
 
 import com.todoapp.entity.Todo;
@@ -18,6 +19,7 @@ public class TodoResponseDTO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime dueDate;
+    private LocalDateTime completedAt;
 
     /**
      * Default constructor
@@ -32,12 +34,13 @@ public class TodoResponseDTO {
         this.id = todo.getId();
         this.title = todo.getTitle();
         this.description = todo.getDescription();
-        this.completed = todo.isCompleted();
+        this.completed = todo.getCompleted(); // Fixed: getCompleted() instead of isCompleted()
         this.priority = todo.getPriority();
         this.category = todo.getCategory();
         this.createdAt = todo.getCreatedAt();
         this.updatedAt = todo.getUpdatedAt();
         this.dueDate = todo.getDueDate();
+        this.completedAt = todo.getCompletedAt();
     }
 
     // Getters and Setters
@@ -95,6 +98,14 @@ public class TodoResponseDTO {
      * @return true if completed, false otherwise
      */
     public boolean isCompleted() {
+        return completed;
+    }
+
+    /**
+     * Get completion status (alternative getter)
+     * @return completion status
+     */
+    public boolean getCompleted() {
         return completed;
     }
 
@@ -186,6 +197,22 @@ public class TodoResponseDTO {
         this.dueDate = dueDate;
     }
 
+    /**
+     * Get the completed timestamp
+     * @return completed timestamp
+     */
+    public LocalDateTime getCompletedAt() {
+        return completedAt;
+    }
+
+    /**
+     * Set the completed timestamp
+     * @param completedAt completed timestamp
+     */
+    public void setCompletedAt(LocalDateTime completedAt) {
+        this.completedAt = completedAt;
+    }
+
     @Override
     public String toString() {
         return "TodoResponseDTO{" +
@@ -195,6 +222,7 @@ public class TodoResponseDTO {
                 ", priority=" + priority +
                 ", category='" + category + '\'' +
                 ", createdAt=" + createdAt +
+                ", dueDate=" + dueDate +
                 '}';
     }
 }

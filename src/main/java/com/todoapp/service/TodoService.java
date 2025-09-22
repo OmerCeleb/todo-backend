@@ -1,10 +1,13 @@
+// src/main/java/com/todoapp/service/TodoService.java
 package com.todoapp.service;
 
 import com.todoapp.dto.TodoRequestDTO;
 import com.todoapp.dto.TodoResponseDTO;
 import com.todoapp.dto.TodoStatsDTO;
 import com.todoapp.entity.Todo;
+import com.todoapp.entity.User;
 import com.todoapp.repository.TodoRepository;
+import com.todoapp.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,7 +18,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * Service layer for Todo business logic.
+ * Service layer for Todo business logic with user authentication support.
  * Handles data transformation, validation, and business rules.
  */
 @Service
@@ -23,19 +26,140 @@ import java.util.stream.Collectors;
 public class TodoService {
 
     private final TodoRepository todoRepository;
+    private final UserRepository userRepository;
+
+    @Autowired
+    public TodoService(TodoRepository todoRepository, UserRepository userRepository) {
+        this.todoRepository = todoRepository;
+        this.userRepository = userRepository;
+    }
+
+    // ================================================
+    // USER-SPECIFIC METHODS (NEW)
+    // ================================================
 
     /**
-     * Constructor with dependency injection
-     * @param todoRepository Repository for database operations
+     * Get all todos for a specific user with optional filtering
      */
-    @Autowired
-    public TodoService(TodoRepository todoRepository) {
-        this.todoRepository = todoRepository;
+    public List<TodoResponseDTO> getUserTodos(Long userId, Boolean completed, Todo.Priority priority, String category, String search) {
+        List<Todo> todos;
+
+        if (search != null && !search.trim().isEmpty()) {
+            todos = todoRepository.findByUserIdAndTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCase(
+                    userId, search, search);
+        } else if (completed != null || priority != null || category != null) {
+            todos = todoRepository.findByUserIdWithFilters(userId, completed, priority, category);
+        } else {
+            todos = todoRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        }
+
+        return todos.stream()
+                .map(TodoResponseDTO::new)
+                .collect(Collectors.toList());
     }
 
     /**
+     * Get a specific todo by ID for a user (security check)
+     */
+    public Optional<TodoResponseDTO> getUserTodoById(Long userId, Long todoId) {
+        return todoRepository.findByIdAndUserId(todoId, userId)
+                .map(TodoResponseDTO::new);
+    }
+
+    /**
+     * Create a new todo for a user
+     */
+    public TodoResponseDTO createTodoForUser(Long userId, TodoRequestDTO todoRequest) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Todo todo = new Todo();
+        mapRequestToEntity(todoRequest, todo);
+        todo.setUser(user);
+
+        Todo savedTodo = todoRepository.save(todo);
+        return new TodoResponseDTO(savedTodo);
+    }
+
+    /**
+     * Update a user's todo (security check)
+     */
+    public Optional<TodoResponseDTO> updateUserTodo(Long userId, Long todoId, TodoRequestDTO todoRequest) {
+        return todoRepository.findByIdAndUserId(todoId, userId)
+                .map(todo -> {
+                    mapRequestToEntity(todoRequest, todo);
+                    Todo updatedTodo = todoRepository.save(todo);
+                    return new TodoResponseDTO(updatedTodo);
+                });
+    }
+
+    /**
+     * Delete a user's todo (security check)
+     */
+    public boolean deleteUserTodo(Long userId, Long todoId) {
+        Optional<Todo> todoOpt = todoRepository.findByIdAndUserId(todoId, userId);
+        if (todoOpt.isPresent()) {
+            todoRepository.delete(todoOpt.get());
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Toggle completion status for a user's todo
+     */
+    public Optional<TodoResponseDTO> toggleUserTodoCompletion(Long userId, Long todoId) {
+        return todoRepository.findByIdAndUserId(todoId, userId)
+                .map(todo -> {
+                    todo.toggleCompleted();
+                    Todo updatedTodo = todoRepository.save(todo);
+                    return new TodoResponseDTO(updatedTodo);
+                });
+    }
+
+    /**
+     * Get todo statistics for a user
+     */
+    public TodoStatsDTO getUserTodoStats(Long userId) {
+        List<Todo> userTodos = todoRepository.findByUserId(userId);
+
+        long totalCount = userTodos.size();
+        long completedCount = userTodos.stream().mapToLong(todo -> todo.getCompleted() ? 1 : 0).sum();
+        long activeCount = totalCount - completedCount;
+        long overdueCount = userTodos.stream()
+                .mapToLong(todo -> todo.isOverdue() ? 1 : 0)
+                .sum();
+
+        return new TodoStatsDTO(totalCount, completedCount, activeCount, overdueCount);
+    }
+
+    /**
+     * Get overdue todos for a user
+     */
+    public List<TodoResponseDTO> getUserOverdueTodos(Long userId) {
+        LocalDateTime now = LocalDateTime.now();
+        return todoRepository.findByUserIdAndDueDateBeforeAndCompletedFalse(userId, now)
+                .stream()
+                .map(TodoResponseDTO::new)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Delete all completed todos for a user
+     */
+    public int deleteUserCompletedTodos(Long userId) {
+        List<Todo> completedTodos = todoRepository.findByUserIdAndCompleted(userId, true);
+        int count = completedTodos.size();
+        todoRepository.deleteAll(completedTodos);
+        return count;
+    }
+
+    // ================================================
+    // ORIGINAL METHODS (KEPT FOR BACKWARD COMPATIBILITY)
+    // ================================================
+
+    /**
      * Get all todos as response DTOs
-     * @return List of all todos
      */
     public List<TodoResponseDTO> getAllTodos() {
         return todoRepository.findAll()
@@ -46,8 +170,6 @@ public class TodoService {
 
     /**
      * Get todo by ID
-     * @param id Todo ID
-     * @return Optional TodoResponseDTO
      */
     public Optional<TodoResponseDTO> getTodoById(Long id) {
         return todoRepository.findById(id)
@@ -55,23 +177,19 @@ public class TodoService {
     }
 
     /**
-     * Create a new todo
-     * @param todoRequest Request DTO with todo data
-     * @return Created todo as response DTO
+     * Create a new todo (without user - deprecated)
      */
+    @Deprecated
     public TodoResponseDTO createTodo(TodoRequestDTO todoRequest) {
         Todo todo = new Todo();
         mapRequestToEntity(todoRequest, todo);
-
+        // Note: This will fail because user is required now
         Todo savedTodo = todoRepository.save(todo);
         return new TodoResponseDTO(savedTodo);
     }
 
     /**
      * Update an existing todo
-     * @param id Todo ID to update
-     * @param todoRequest Request DTO with updated data
-     * @return Updated todo as response DTO, or empty if not found
      */
     public Optional<TodoResponseDTO> updateTodo(Long id, TodoRequestDTO todoRequest) {
         return todoRepository.findById(id)
@@ -84,13 +202,11 @@ public class TodoService {
 
     /**
      * Toggle todo completion status
-     * @param id Todo ID to toggle
-     * @return Updated todo as response DTO, or empty if not found
      */
     public Optional<TodoResponseDTO> toggleTodo(Long id) {
         return todoRepository.findById(id)
                 .map(todo -> {
-                    todo.setCompleted(!todo.isCompleted());
+                    todo.toggleCompleted();
                     Todo updatedTodo = todoRepository.save(todo);
                     return new TodoResponseDTO(updatedTodo);
                 });
@@ -98,8 +214,6 @@ public class TodoService {
 
     /**
      * Delete a todo by ID
-     * @param id Todo ID to delete
-     * @return true if deleted, false if not found
      */
     public boolean deleteTodo(Long id) {
         if (todoRepository.existsById(id)) {
@@ -111,7 +225,6 @@ public class TodoService {
 
     /**
      * Bulk delete multiple todos
-     * @param ids List of todo IDs to delete
      */
     public void bulkDeleteTodos(List<Long> ids) {
         todoRepository.deleteAllById(ids);
@@ -119,8 +232,6 @@ public class TodoService {
 
     /**
      * Get todos by completion status
-     * @param completed true for completed, false for active todos
-     * @return List of todos with specified completion status
      */
     public List<TodoResponseDTO> getTodosByCompleted(boolean completed) {
         return todoRepository.findByCompleted(completed)
@@ -131,8 +242,6 @@ public class TodoService {
 
     /**
      * Get todos by priority level
-     * @param priority Priority level to filter by
-     * @return List of todos with specified priority
      */
     public List<TodoResponseDTO> getTodosByPriority(Todo.Priority priority) {
         return todoRepository.findByPriority(priority)
@@ -143,8 +252,6 @@ public class TodoService {
 
     /**
      * Get todos by category
-     * @param category Category to filter by
-     * @return List of todos in specified category
      */
     public List<TodoResponseDTO> getTodosByCategory(String category) {
         return todoRepository.findByCategoryIgnoreCase(category)
@@ -155,36 +262,58 @@ public class TodoService {
 
     /**
      * Search todos by title or description
-     * @param searchTerm Text to search for
-     * @return List of todos containing the search term
      */
     public List<TodoResponseDTO> searchTodos(String searchTerm) {
-        return todoRepository.searchByTitleOrDescription(searchTerm)
+        return todoRepository.findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCase(searchTerm, searchTerm)
                 .stream()
                 .map(TodoResponseDTO::new)
                 .collect(Collectors.toList());
     }
 
     /**
-     * Get filtered todos based on multiple criteria
-     * @param completed Completion status filter (null to ignore)
-     * @param priority Priority filter (null to ignore)
-     * @param category Category filter (null to ignore)
-     * @return List of todos matching all non-null criteria
+     * Get filtered todos
      */
     public List<TodoResponseDTO> getFilteredTodos(Boolean completed, Todo.Priority priority, String category) {
-        return todoRepository.findByFilters(completed, priority, category)
-                .stream()
+        List<Todo> todos = todoRepository.findAll();
+
+        return todos.stream()
+                .filter(todo -> completed == null || todo.getCompleted().equals(completed))
+                .filter(todo -> priority == null || todo.getPriority().equals(priority))
+                .filter(todo -> category == null || category.isEmpty() ||
+                        (todo.getCategory() != null && todo.getCategory().equalsIgnoreCase(category)))
                 .map(TodoResponseDTO::new)
                 .collect(Collectors.toList());
     }
 
     /**
-     * Get overdue todos (past due date and not completed)
-     * @return List of overdue todos
+     * Get todo statistics
+     */
+    public TodoStatsDTO getTodoStats() {
+        List<Todo> allTodos = todoRepository.findAll();
+
+        long totalCount = allTodos.size();
+        long completedCount = allTodos.stream().mapToLong(todo -> todo.getCompleted() ? 1 : 0).sum();
+        long activeCount = totalCount - completedCount;
+        long overdueCount = allTodos.stream()
+                .mapToLong(todo -> todo.isOverdue() ? 1 : 0)
+                .sum();
+
+        return new TodoStatsDTO(totalCount, completedCount, activeCount, overdueCount);
+    }
+
+    /**
+     * Get all unique categories
+     */
+    public List<String> getAllCategories() {
+        return todoRepository.findDistinctCategories();
+    }
+
+    /**
+     * Get overdue todos
      */
     public List<TodoResponseDTO> getOverdueTodos() {
-        return todoRepository.findByDueDateBeforeAndCompletedFalse(LocalDateTime.now())
+        LocalDateTime now = LocalDateTime.now();
+        return todoRepository.findByDueDateBeforeAndCompletedFalse(now)
                 .stream()
                 .map(TodoResponseDTO::new)
                 .collect(Collectors.toList());
@@ -192,7 +321,6 @@ public class TodoService {
 
     /**
      * Get todos due today
-     * @return List of todos due today
      */
     public List<TodoResponseDTO> getTodosDueToday() {
         LocalDateTime startOfDay = LocalDateTime.now().toLocalDate().atStartOfDay();
@@ -205,47 +333,31 @@ public class TodoService {
     }
 
     /**
-     * Get all unique categories
-     * @return List of all categories used in todos
-     */
-    public List<String> getAllCategories() {
-        return todoRepository.findAllCategories();
-    }
-
-    /**
-     * Get todo statistics
-     * @return Statistics about todos (total, completed, active, overdue)
-     */
-    public TodoStatsDTO getTodoStats() {
-        long total = todoRepository.count();
-        long completed = todoRepository.countByCompleted(true);
-        long active = todoRepository.countByCompleted(false);
-        long overdue = todoRepository.countOverdueTodos(LocalDateTime.now());
-
-        return new TodoStatsDTO(total, completed, active, overdue);
-    }
-
-    /**
-     * Get active todos ordered by priority and due date
-     * @return List of active todos sorted by importance
+     * Get active todos ordered by priority
      */
     public List<TodoResponseDTO> getActiveTodosOrderedByPriority() {
-        return todoRepository.findActiveTodosOrderedByPriorityAndDueDate()
+        return todoRepository.findByCompletedFalseOrderByPriorityDescDueDateAsc()
                 .stream()
                 .map(TodoResponseDTO::new)
                 .collect(Collectors.toList());
     }
 
+    // ================================================
+    // UTILITY METHODS
+    // ================================================
+
     /**
-     * Helper method to map request DTO to entity
-     * @param request Source DTO
-     * @param todo Target entity
+     * Map request DTO to entity
      */
     private void mapRequestToEntity(TodoRequestDTO request, Todo todo) {
         todo.setTitle(request.getTitle());
         todo.setDescription(request.getDescription());
-        todo.setPriority(request.getPriority() != null ? request.getPriority() : Todo.Priority.MEDIUM);
+        todo.setPriority(request.getPriority());
         todo.setCategory(request.getCategory());
         todo.setDueDate(request.getDueDate());
+
+        if (request.getCompleted() != null) {
+            todo.setCompleted(request.getCompleted());
+        }
     }
 }

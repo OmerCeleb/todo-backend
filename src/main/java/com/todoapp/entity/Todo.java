@@ -9,8 +9,17 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
+/**
+ * Todo entity representing a task or todo item.
+ * Each todo belongs to a user and contains task information.
+ */
 @Entity
-@Table(name = "todos")
+@Table(name = "todos", indexes = {
+        @Index(name = "idx_todo_user", columnList = "user_id"),
+        @Index(name = "idx_todo_completed", columnList = "completed"),
+        @Index(name = "idx_todo_priority", columnList = "priority"),
+        @Index(name = "idx_todo_due_date", columnList = "due_date")
+})
 public class Todo {
 
     @Id
@@ -18,23 +27,26 @@ public class Todo {
     private Long id;
 
     @NotBlank(message = "Title is required")
-    @Size(max = 255, message = "Title must be less than 255 characters")
+    @Size(min = 1, max = 200, message = "Title must be between 1 and 200 characters")
     @Column(nullable = false)
     private String title;
 
-    @Size(max = 1000, message = "Description must be less than 1000 characters")
+    @Size(max = 1000, message = "Description must not exceed 1000 characters")
     @Column(columnDefinition = "TEXT")
     private String description;
 
     @Column(nullable = false)
-    private boolean completed = false;
+    private Boolean completed = false;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Priority priority = Priority.MEDIUM;
 
-    @Size(max = 100, message = "Category must be less than 100 characters")
+    @Size(max = 100, message = "Category must not exceed 100 characters")
     private String category;
+
+    @Column(name = "due_date")
+    private LocalDateTime dueDate;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -44,22 +56,51 @@ public class Todo {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    @Column(name = "due_date")
-    private LocalDateTime dueDate;
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
 
-    // Priority Enum
+    // ============================================
+    // USER RELATIONSHIP - ADDED FOR AUTHENTICATION
+    // ============================================
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    /**
+     * Priority levels for todos
+     */
     public enum Priority {
-        LOW, MEDIUM, HIGH
+        LOW("Low"),
+        MEDIUM("Medium"),
+        HIGH("High");
+
+        private final String displayName;
+
+        Priority(String displayName) {
+            this.displayName = displayName;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
     }
 
     // Constructors
     public Todo() {}
 
-    public Todo(String title, String description, Priority priority, String category) {
+    public Todo(String title, String description, User user) {
+        this.title = title;
+        this.description = description;
+        this.user = user;
+    }
+
+    public Todo(String title, String description, Priority priority, String category, User user) {
         this.title = title;
         this.description = description;
         this.priority = priority;
         this.category = category;
+        this.user = user;
     }
 
     // Getters and Setters
@@ -87,12 +128,18 @@ public class Todo {
         this.description = description;
     }
 
-    public boolean isCompleted() {
+    public Boolean getCompleted() {
         return completed;
     }
 
-    public void setCompleted(boolean completed) {
+    public void setCompleted(Boolean completed) {
         this.completed = completed;
+        // Set completion timestamp when marking as completed
+        if (completed && this.completedAt == null) {
+            this.completedAt = LocalDateTime.now();
+        } else if (!completed) {
+            this.completedAt = null;
+        }
     }
 
     public Priority getPriority() {
@@ -111,6 +158,14 @@ public class Todo {
         this.category = category;
     }
 
+    public LocalDateTime getDueDate() {
+        return dueDate;
+    }
+
+    public void setDueDate(LocalDateTime dueDate) {
+        this.dueDate = dueDate;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -127,23 +182,105 @@ public class Todo {
         this.updatedAt = updatedAt;
     }
 
-    public LocalDateTime getDueDate() {
-        return dueDate;
+    public LocalDateTime getCompletedAt() {
+        return completedAt;
     }
 
-    public void setDueDate(LocalDateTime dueDate) {
-        this.dueDate = dueDate;
+    public void setCompletedAt(LocalDateTime completedAt) {
+        this.completedAt = completedAt;
     }
 
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    // Utility methods
+
+    /**
+     * Check if todo is overdue
+     */
+    public boolean isOverdue() {
+        return dueDate != null && !completed && LocalDateTime.now().isAfter(dueDate);
+    }
+
+    /**
+     * Check if todo is due today
+     */
+    public boolean isDueToday() {
+        if (dueDate == null) return false;
+        LocalDateTime now = LocalDateTime.now();
+        return dueDate.toLocalDate().equals(now.toLocalDate());
+    }
+
+    /**
+     * Check if todo is due within the next 24 hours
+     */
+    public boolean isDueSoon() {
+        if (dueDate == null) return false;
+        LocalDateTime now = LocalDateTime.now();
+        return dueDate.isAfter(now) && dueDate.isBefore(now.plusDays(1));
+    }
+
+    /**
+     * Mark todo as completed
+     */
+    public void markAsCompleted() {
+        this.completed = true;
+        this.completedAt = LocalDateTime.now();
+    }
+
+    /**
+     * Mark todo as incomplete
+     */
+    public void markAsIncomplete() {
+        this.completed = false;
+        this.completedAt = null;
+    }
+
+    /**
+     * Toggle completion status
+     */
+    public void toggleCompleted() {
+        if (this.completed) {
+            markAsIncomplete();
+        } else {
+            markAsCompleted();
+        }
+    }
+
+    // toString method (excluding user to avoid circular reference)
     @Override
     public String toString() {
         return "Todo{" +
                 "id=" + id +
                 ", title='" + title + '\'' +
+                ", description='" + description + '\'' +
                 ", completed=" + completed +
                 ", priority=" + priority +
                 ", category='" + category + '\'' +
+                ", dueDate=" + dueDate +
                 ", createdAt=" + createdAt +
+                ", updatedAt=" + updatedAt +
+                ", completedAt=" + completedAt +
+                ", userId=" + (user != null ? user.getId() : null) +
                 '}';
+    }
+
+    // equals and hashCode
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Todo)) return false;
+        Todo todo = (Todo) o;
+        return id != null && id.equals(todo.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }

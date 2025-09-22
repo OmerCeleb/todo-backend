@@ -1,3 +1,4 @@
+// src/main/java/com/todoapp/dto/TodoRequestDTO.java
 package com.todoapp.dto;
 
 import com.todoapp.entity.Todo;
@@ -19,6 +20,8 @@ public class TodoRequestDTO {
     @Size(max = 1000, message = "Description must be less than 1000 characters")
     private String description;
 
+    private Boolean completed; // Added completed field
+
     private Todo.Priority priority = Todo.Priority.MEDIUM;
 
     @Size(max = 100, message = "Category must be less than 100 characters")
@@ -35,13 +38,15 @@ public class TodoRequestDTO {
      * Constructor with all fields
      * @param title Todo title
      * @param description Todo description
+     * @param completed Todo completion status
      * @param priority Todo priority level
      * @param category Todo category
      * @param dueDate Todo due date
      */
-    public TodoRequestDTO(String title, String description, Todo.Priority priority, String category, LocalDateTime dueDate) {
+    public TodoRequestDTO(String title, String description, Boolean completed, Todo.Priority priority, String category, LocalDateTime dueDate) {
         this.title = title;
         this.description = description;
+        this.completed = completed;
         this.priority = priority;
         this.category = category;
         this.dueDate = dueDate;
@@ -79,6 +84,22 @@ public class TodoRequestDTO {
      */
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    /**
+     * Get the todo completion status
+     * @return completion status (null if not specified)
+     */
+    public Boolean getCompleted() {
+        return completed;
+    }
+
+    /**
+     * Set the todo completion status
+     * @param completed completion status
+     */
+    public void setCompleted(Boolean completed) {
+        this.completed = completed;
     }
 
     /**
@@ -133,6 +154,7 @@ public class TodoRequestDTO {
     public String toString() {
         return "TodoRequestDTO{" +
                 "title='" + title + '\'' +
+                ", completed=" + completed +
                 ", priority=" + priority +
                 ", category='" + category + '\'' +
                 ", dueDate=" + dueDate +
