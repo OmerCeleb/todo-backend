@@ -18,7 +18,8 @@ import java.time.LocalDateTime;
         @Index(name = "idx_todo_user", columnList = "user_id"),
         @Index(name = "idx_todo_completed", columnList = "completed"),
         @Index(name = "idx_todo_priority", columnList = "priority"),
-        @Index(name = "idx_todo_due_date", columnList = "due_date")
+        @Index(name = "idx_todo_due_date", columnList = "due_date"),
+        @Index(name = "idx_todo_display_order", columnList = "display_order")  // NEW INDEX
 })
 public class Todo {
 
@@ -48,6 +49,13 @@ public class Todo {
     @Column(name = "due_date")
     private LocalDateTime dueDate;
 
+    // ============================================
+    // NEW FIELD FOR DRAG-AND-DROP ORDERING
+    // ============================================
+
+    @Column(name = "display_order")
+    private Integer displayOrder;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -60,7 +68,7 @@ public class Todo {
     private LocalDateTime completedAt;
 
     // ============================================
-    // USER RELATIONSHIP - ADDED FOR AUTHENTICATION
+    // USER RELATIONSHIP
     // ============================================
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -166,6 +174,15 @@ public class Todo {
         this.dueDate = dueDate;
     }
 
+    // NEW GETTER/SETTER FOR DISPLAY ORDER
+    public Integer getDisplayOrder() {
+        return displayOrder;
+    }
+
+    public void setDisplayOrder(Integer displayOrder) {
+        this.displayOrder = displayOrder;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -201,6 +218,18 @@ public class Todo {
     // Utility methods
 
     /**
+     * Toggle completion status
+     */
+    public void toggleCompleted() {
+        this.completed = !this.completed;
+        if (this.completed && this.completedAt == null) {
+            this.completedAt = LocalDateTime.now();
+        } else if (!this.completed) {
+            this.completedAt = null;
+        }
+    }
+
+    /**
      * Check if todo is overdue
      */
     public boolean isOverdue() {
@@ -217,70 +246,24 @@ public class Todo {
     }
 
     /**
-     * Check if todo is due within the next 24 hours
+     * Check if todo is due this week
      */
-    public boolean isDueSoon() {
+    public boolean isDueThisWeek() {
         if (dueDate == null) return false;
         LocalDateTime now = LocalDateTime.now();
-        return dueDate.isAfter(now) && dueDate.isBefore(now.plusDays(1));
+        LocalDateTime weekEnd = now.plusDays(7);
+        return dueDate.isAfter(now) && dueDate.isBefore(weekEnd);
     }
 
-    /**
-     * Mark todo as completed
-     */
-    public void markAsCompleted() {
-        this.completed = true;
-        this.completedAt = LocalDateTime.now();
-    }
-
-    /**
-     * Mark todo as incomplete
-     */
-    public void markAsIncomplete() {
-        this.completed = false;
-        this.completedAt = null;
-    }
-
-    /**
-     * Toggle completion status
-     */
-    public void toggleCompleted() {
-        if (this.completed) {
-            markAsIncomplete();
-        } else {
-            markAsCompleted();
-        }
-    }
-
-    // toString method (excluding user to avoid circular reference)
     @Override
     public String toString() {
         return "Todo{" +
                 "id=" + id +
                 ", title='" + title + '\'' +
-                ", description='" + description + '\'' +
                 ", completed=" + completed +
                 ", priority=" + priority +
                 ", category='" + category + '\'' +
-                ", dueDate=" + dueDate +
-                ", createdAt=" + createdAt +
-                ", updatedAt=" + updatedAt +
-                ", completedAt=" + completedAt +
-                ", userId=" + (user != null ? user.getId() : null) +
+                ", displayOrder=" + displayOrder +
                 '}';
-    }
-
-    // equals and hashCode
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Todo)) return false;
-        Todo todo = (Todo) o;
-        return id != null && id.equals(todo.getId());
-    }
-
-    @Override
-    public int hashCode() {
-        return getClass().hashCode();
     }
 }
