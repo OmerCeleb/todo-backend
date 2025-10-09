@@ -137,6 +137,10 @@ public class SecurityConfig {
                 )
 
                 // Configure authorization rules
+                // src/main/java/com/todoapp/config/SecurityConfig.java
+// MEVCUT DOSYAYI GÜNCELLEYIN - sadece authorizeHttpRequests kısmını değiştirin
+
+// Configure authorization rules
                 .authorizeHttpRequests(authz -> authz
                         // Public endpoints (no authentication required)
                         .requestMatchers(
@@ -146,7 +150,13 @@ public class SecurityConfig {
                                 "/static/**",             // Static resources
                                 "/h2-console/**",         // H2 database console (if using H2)
                                 "/actuator/health",       // Health check
-                                "/error"                  // Error page
+                                "/error",                 // Error page
+                                "/swagger-ui/**",         // Swagger UI resources
+                                "/swagger-ui.html",       // Swagger UI page
+                                "/v3/api-docs/**",        // OpenAPI documentation
+                                "/api-docs/**",           // API docs
+                                "/swagger-resources/**",  // Swagger resources
+                                "/webjars/**"             // Webjars (Swagger UI dependencies)
                         ).permitAll()
 
                         // Admin-only endpoints

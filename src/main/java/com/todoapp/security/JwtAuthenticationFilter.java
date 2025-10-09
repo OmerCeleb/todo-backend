@@ -110,6 +110,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 path.equals("/") ||
                 path.startsWith("/static/") ||
                 path.startsWith("/public/") ||
+                // Swagger/OpenAPI paths
+                path.startsWith("/swagger-ui") ||
+                path.startsWith("/v3/api-docs") ||
+                path.startsWith("/api-docs") ||
+                path.startsWith("/swagger-resources") ||
+                path.startsWith("/webjars") ||
+                // Static resources
                 path.endsWith(".html") ||
                 path.endsWith(".css") ||
                 path.endsWith(".js") ||

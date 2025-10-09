@@ -94,8 +94,19 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Password Encoding (BCrypt) - Spring Security'de dahil ama açık olması için -->
-        <!-- Spring Security otomatik olarak BCryptPasswordEncoder sağlar -->
+        <!-- H2 In-Memory Database for Testing -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- SpringDoc OpenAPI (Swagger) for API Documentation -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.3.0</version>
+        </dependency>
 
         <!-- Test Dependencies -->
         <dependency>

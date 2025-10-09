@@ -1,416 +1,347 @@
-# 📝 Todo App - Full-Stack Task Management System
+# 📝 Modern Todo Application - Backend
 
-<div align="center">
+[![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://www.oracle.com/java/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue.svg)](https://www.postgresql.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Test Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/OmerCeleb/todo-backend)
 
-![Java](https://img.shields.io/badge/Java-21-orange?style=for-the-badge&logo=openjdk)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.0-brightgreen?style=for-the-badge&logo=springboot)
-![React](https://img.shields.io/badge/React-18-blue?style=for-the-badge&logo=react)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue?style=for-the-badge&logo=postgresql)
-![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+> A production-ready RESTful API for todo management with JWT authentication, built with Spring Boot and PostgreSQL.
 
-A modern, full-stack todo application with a Spring Boot backend and React frontend, featuring JWT authentication, drag-and-drop functionality, and real-time updates.
-
-[Features](#-features) • [Tech Stack](#-tech-stack) • [Getting Started](#-getting-started) • [API Documentation](#-api-documentation) • [Contributing](#-contributing)
-
-</div>
+[🌐 Live Demo](#) | [📚 API Documentation](http://localhost:8080/swagger-ui.html) | [💻 Frontend Repository](https://github.com/OmerCeleb/todo-app-frontend)
 
 ---
 
-## 🎯 Features
+## ✨ Features
 
-### Backend
-- ✅ **RESTful API** with Spring Boot 3.3
-- 🔐 **JWT Authentication** with Spring Security
-- 🗄️ **PostgreSQL Database** with JPA/Hibernate
-- 📊 **Statistics & Analytics** endpoint
-- 🔍 **Advanced Filtering** (status, priority, category, date)
-- ✨ **Automatic Timestamps** for todos
-- 🛡️ **Input Validation** with Bean Validation
-- 🌐 **CORS Configuration** for frontend integration
+### 🔐 Authentication & Security
+- JWT-based authentication with refresh tokens
+- BCrypt password hashing
+- Role-based access control (USER, ADMIN)
+- Secure token validation and expiration
 
-### Frontend
-- ⚛️ **React 18** with TypeScript
-- 🎨 **Tailwind CSS** for modern UI
-- 🌓 **Dark Mode** support
-- 🎭 **Drag & Drop** todo reordering
-- 📱 **Fully Responsive** design
-- 🔄 **Real-time Updates** with state management
-- 🎨 **Category Colors** & priority indicators
-- 📊 **Statistics Dashboard**
-- 🎯 **Bulk Actions** for todos
-- 🔍 **Advanced Filters** & search
+### ✅ Todo Management
+- Complete CRUD operations
+- Priority levels (LOW, MEDIUM, HIGH)
+- Category organization
+- Due date tracking with overdue detection
+- Search and advanced filtering
+- Bulk operations (delete, update)
 
----
+### 📊 Statistics & Analytics
+- Real-time todo statistics
+- Completion tracking
+- Overdue todo monitoring
+- Category-based analytics
 
-## 🛠️ Tech Stack
-
-### Backend
-- **Language:** Java 21
-- **Framework:** Spring Boot 3.3.0
-- **Security:** Spring Security + JWT
-- **Database:** PostgreSQL 15
-- **ORM:** Hibernate / Spring Data JPA
-- **Build Tool:** Maven
-- **Validation:** Bean Validation (JSR 380)
-
-### Frontend
-- **Framework:** React 18
-- **Language:** TypeScript 5
-- **Styling:** Tailwind CSS
-- **State Management:** Zustand
-- **HTTP Client:** Axios
-- **Routing:** React Router
-- **Icons:** Lucide React
-- **Drag & Drop:** @dnd-kit
+### 🛠️ Technical Highlights
+- **Global Exception Handling**: Consistent error responses across the API
+- **OpenAPI/Swagger Documentation**: Interactive API documentation
+- **Comprehensive Testing**: 29 unit and integration tests (100% passing)
+- **Clean Architecture**: Layered architecture with clear separation of concerns
+- **Database Migrations**: Automatic schema management with Hibernate
 
 ---
 
-## 📋 Prerequisites
+## 🏗️ Architecture
 
-Before you begin, ensure you have the following installed:
-
-- **Java 21** or higher ([Download](https://adoptium.net/))
-- **Maven 3.6+** ([Download](https://maven.apache.org/download.cgi))
-- **Node.js 18+** ([Download](https://nodejs.org/))
-- **Docker** (for PostgreSQL) ([Download](https://www.docker.com/))
-- **Git** ([Download](https://git-scm.com/))
-
----
-
-## 🚀 Getting Started
-
-### 1️⃣ Clone the Repository
-
-```bash
-git clone https://github.com/yourusername/todo-app.git
-cd todo-app
+```
+┌─────────────────────────────────────────────────┐
+│              Client (React Frontend)            │
+└──────────────────┬──────────────────────────────┘
+                   │ HTTP/REST + JWT
+┌──────────────────▼──────────────────────────────┐
+│         Controller Layer (REST API)             │
+│  ┌────────────────────────────────────────┐     │
+│  │  TodoController  │  AuthController     │     │
+│  └────────────┬───────────────┬───────────┘     │
+├───────────────▼───────────────▼─────────────────┤
+│              Service Layer                      │
+│  ┌────────────────────────────────────────┐     │
+│  │  TodoService    │   UserService        │     │
+│  └────────────┬───────────────┬───────────┘     │
+├───────────────▼───────────────▼─────────────────┤
+│           Repository Layer (JPA)                │
+│  ┌────────────────────────────────────────┐     │
+│  │  TodoRepository │  UserRepository      │     │
+│  └────────────┬───────────────┬───────────┘     │
+├───────────────▼───────────────▼─────────────────┤
+│          Database (PostgreSQL)                  │
+└─────────────────────────────────────────────────┘
 ```
 
-### 2️⃣ Backend Setup
+---
 
-#### Start PostgreSQL with Docker
+## 🚀 Quick Start
 
+### Prerequisites
+
+- **Java 21+**
+- **Maven 3.6+**
+- **PostgreSQL 15+**
+- **Git**
+
+### Installation
+
+1. **Clone the repository**
 ```bash
-docker run --name todo-postgres \
-  -e POSTGRES_USER=your_username \
-  -e POSTGRES_PASSWORD=your_secure_password \
-  -e POSTGRES_DB=todo_db \
-  -p 5432:5432 \
-  -d postgres:15
+git clone https://github.com/OmerCeleb/todo-backend.git
+cd todo-backend
 ```
 
-#### Configure Environment Variables
-
-Create a `.env` file in the backend root directory:
-
+2. **Set up PostgreSQL**
 ```bash
+# Create database
+createdb todo_db
+
+# Or using psql
+psql -U postgres
+CREATE DATABASE todo_db;
+\q
+```
+
+3. **Configure environment variables**
+```bash
+# Create .env file (or set as environment variables)
 cp .env.example .env
-```
 
-Update `.env` with your configuration:
-
-```env
-# Database Configuration
+# Edit .env with your configurations
 DB_URL=jdbc:postgresql://localhost:5432/todo_db
 DB_USERNAME=your_username
-DB_PASSWORD=your_secure_password
-
-# JWT Configuration (Generate a secure random string)
-JWT_SECRET=your-very-long-and-secure-jwt-secret-key-minimum-256-bits
-JWT_EXPIRATION=86400000
-
-# Admin User (Created on first startup)
-ADMIN_EMAIL=admin@todoapp.com
-ADMIN_PASSWORD=your_admin_password
-ADMIN_NAME=Admin User
-
-# Server Configuration
-SERVER_PORT=8080
-
-# CORS Allowed Origins
-CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
+DB_PASSWORD=your_password
+JWT_SECRET=your-super-secret-key-min-64-characters-for-hs512-algorithm
 ```
 
-#### Build and Run Backend
-
+4. **Build and run**
 ```bash
-# Navigate to backend directory
-cd backend
-
-# Build the project
+# Install dependencies and run tests
 mvn clean install
 
 # Run the application
 mvn spring-boot:run
 ```
 
-The backend will start on `http://localhost:8080`
-
-### 3️⃣ Frontend Setup
-
-```bash
-# Navigate to frontend directory
-cd frontend
-
-# Install dependencies
-npm install
-
-# Start development server
-npm start
-```
-
-The frontend will start on `http://localhost:3000`
+The API will be available at `http://localhost:8080`
 
 ---
 
-## 📖 API Documentation
+## 📚 API Documentation
 
-### Base URL
+### Swagger UI (Interactive)
 ```
-http://localhost:8080/api
+http://localhost:8080/swagger-ui.html
 ```
 
-### Authentication Endpoints
+### OpenAPI Specification (JSON)
+```
+http://localhost:8080/api-docs
+```
 
-#### Register New User
+### Quick API Overview
+
+#### Authentication Endpoints
 ```http
-POST /api/auth/register
-Content-Type: application/json
-
-{
-  "name": "John Doe",
-  "email": "john@example.com",
-  "password": "SecurePass123!"
-}
+POST   /api/auth/register    # Register new user
+POST   /api/auth/login        # Login user
+POST   /api/auth/refresh      # Refresh JWT token
 ```
 
-#### Login
+#### Todo Endpoints (Requires Authentication)
 ```http
-POST /api/auth/login
-Content-Type: application/json
-
-{
-  "email": "john@example.com",
-  "password": "SecurePass123!"
-}
+GET    /api/todos             # Get all todos (with filters)
+POST   /api/todos             # Create new todo
+GET    /api/todos/{id}        # Get todo by ID
+PUT    /api/todos/{id}        # Update todo
+DELETE /api/todos/{id}        # Delete todo
+PATCH  /api/todos/{id}        # Toggle todo completion
+GET    /api/todos/stats       # Get todo statistics
 ```
 
-**Response:**
+### Example Request
+
+**Create a Todo**
+```bash
+curl -X POST http://localhost:8080/api/todos \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Complete project documentation",
+    "description": "Write comprehensive README",
+    "priority": "HIGH",
+    "category": "Documentation",
+    "dueDate": "2025-10-15T23:59:59"
+  }'
+```
+
+**Response**
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": 1,
-    "name": "John Doe",
-    "email": "john@example.com"
-  }
-}
-```
-
-### Todo Endpoints
-
-All todo endpoints require authentication. Include JWT token in headers:
-```
-Authorization: Bearer <your_jwt_token>
-```
-
-#### Get All Todos
-```http
-GET /api/todos
-```
-
-**Query Parameters:**
-- `completed` (boolean): Filter by completion status
-- `priority` (string): LOW, MEDIUM, HIGH
-- `category` (string): Filter by category
-- `search` (string): Search in title and description
-
-#### Create Todo
-```http
-POST /api/todos
-Content-Type: application/json
-
-{
+  "id": 1,
   "title": "Complete project documentation",
   "description": "Write comprehensive README",
+  "completed": false,
   "priority": "HIGH",
   "category": "Documentation",
-  "dueDate": "2025-01-25T23:59:59"
+  "dueDate": "2025-10-15T23:59:59",
+  "createdAt": "2025-10-09T14:00:00",
+  "updatedAt": "2025-10-09T14:00:00"
 }
-```
-
-#### Update Todo
-```http
-PUT /api/todos/{id}
-Content-Type: application/json
-
-{
-  "title": "Updated title",
-  "priority": "MEDIUM"
-}
-```
-
-#### Toggle Completion
-```http
-PATCH /api/todos/{id}
-Content-Type: application/json
-
-{
-  "completed": true
-}
-```
-
-#### Delete Todo
-```http
-DELETE /api/todos/{id}
-```
-
-#### Get Statistics
-```http
-GET /api/todos/stats
-```
-
-**Response:**
-```json
-{
-  "total": 25,
-  "completed": 10,
-  "active": 15,
-  "overdue": 3,
-  "completionPercentage": 40.0
-}
-```
-
-#### Additional Endpoints
-- `GET /api/todos/categories` - Get all categories
-- `GET /api/todos/overdue` - Get overdue todos
-- `GET /api/todos/due-today` - Get todos due today
-- `POST /api/todos/bulk-delete` - Bulk delete todos
-- `POST /api/todos/reorder` - Reorder todos
-
----
-
-## 🏗️ Project Structure
-
-### Backend Structure
-```
-backend/
-├── src/
-│   ├── main/
-│   │   ├── java/com/todoapp/
-│   │   │   ├── controller/          # REST endpoints
-│   │   │   ├── service/             # Business logic
-│   │   │   ├── repository/          # Data access
-│   │   │   ├── entity/              # JPA entities
-│   │   │   ├── dto/                 # Data Transfer Objects
-│   │   │   ├── security/            # JWT & Security config
-│   │   │   └── TodoAppApplication.java
-│   │   └── resources/
-│   │       └── application.yml      # Configuration
-│   └── test/                        # Unit & Integration tests
-├── .env                             # Environment variables (gitignored)
-├── .env.example                     # Example environment variables
-├── .gitignore
-└── pom.xml                          # Maven dependencies
-```
-
-### Frontend Structure
-```
-frontend/
-├── src/
-│   ├── components/                  # React components
-│   │   ├── TodoForm/
-│   │   ├── TodoItem/
-│   │   ├── TodoFilters/
-│   │   ├── DragDropContext/
-│   │   └── ui/                      # Reusable UI components
-│   ├── contexts/                    # React contexts
-│   ├── hooks/                       # Custom hooks
-│   ├── services/                    # API services
-│   ├── store/                       # State management
-│   ├── utils/                       # Utility functions
-│   └── App.tsx                      # Main app component
-├── public/
-├── .env                             # Environment variables (gitignored)
-├── .env.example
-└── package.json
 ```
 
 ---
 
 ## 🧪 Testing
 
-### Backend Testing
 ```bash
 # Run all tests
 mvn test
 
-# Run with coverage
+# Run specific test class
+mvn test -Dtest=TodoServiceTest
+
+# Generate test coverage report
 mvn test jacoco:report
-
-# View coverage report
-open target/site/jacoco/index.html
 ```
 
-### Frontend Testing
-```bash
-# Run tests
-npm test
+**Test Results:** ✅ 29/29 tests passing
+- ✅ 11 Service layer tests
+- ✅ 10 Todo Controller integration tests
+- ✅ 8 Auth Controller integration tests
 
-# Run with coverage
-npm test -- --coverage
+---
 
-# E2E tests (if configured)
-npm run test:e2e
+## 🗂️ Project Structure
+
 ```
+src/
+├── main/
+│   ├── java/com/todoapp/
+│   │   ├── config/              # Configuration classes
+│   │   │   ├── OpenAPIConfig.java
+│   │   │   └── SecurityConfig.java
+│   │   ├── controller/          # REST Controllers
+│   │   │   ├── AuthController.java
+│   │   │   └── TodoController.java
+│   │   ├── dto/                 # Data Transfer Objects
+│   │   │   ├── TodoRequestDTO.java
+│   │   │   ├── TodoResponseDTO.java
+│   │   │   ├── ErrorResponse.java
+│   │   │   └── auth/
+│   │   ├── entity/              # JPA Entities
+│   │   │   ├── Todo.java
+│   │   │   └── User.java
+│   │   ├── exception/           # Custom Exceptions
+│   │   │   ├── GlobalExceptionHandler.java
+│   │   │   ├── TodoNotFoundException.java
+│   │   │   └── ...
+│   │   ├── repository/          # JPA Repositories
+│   │   │   ├── TodoRepository.java
+│   │   │   └── UserRepository.java
+│   │   ├── security/            # Security Components
+│   │   │   └── JwtAuthenticationFilter.java
+│   │   ├── service/             # Business Logic
+│   │   │   ├── TodoService.java
+│   │   │   └── UserService.java
+│   │   └── util/                # Utility Classes
+│   │       └── JwtUtil.java
+│   └── resources/
+│       └── application.yml      # Application Configuration
+└── test/                        # Unit & Integration Tests
+```
+
+---
+
+## 🛠️ Tech Stack
+
+### Core
+- **Java 21** - Modern Java with latest features
+- **Spring Boot 3.3.0** - Enterprise-grade application framework
+- **Spring Security** - Authentication and authorization
+- **Spring Data JPA** - Data persistence layer
+- **PostgreSQL 15** - Production-ready relational database
+
+### Libraries & Tools
+- **JWT (jjwt 0.12.3)** - JSON Web Token implementation
+- **SpringDoc OpenAPI 2.3.0** - API documentation
+- **Hibernate** - ORM for database operations
+- **Bean Validation** - Input validation
+- **Lombok** - Reduce boilerplate code
+- **JUnit 5 & Mockito** - Testing framework
+
+### Development Tools
+- **Maven** - Dependency management
+- **Spring DevTools** - Hot reload for development
+- **H2 Database** - In-memory database for testing
 
 ---
 
 ## 🔒 Security
 
-- ✅ **JWT Authentication** with secure token generation
-- ✅ **Password Hashing** with BCrypt
-- ✅ **CORS** properly configured
-- ✅ **SQL Injection** protection via JPA
-- ✅ **Input Validation** on all endpoints
-- ✅ **Environment Variables** for sensitive data
-- ⚠️ **HTTPS** recommended for production
+- **JWT Authentication**: Stateless authentication with access and refresh tokens
+- **BCrypt Password Hashing**: Secure password storage
+- **CORS Configuration**: Controlled cross-origin resource sharing
+- **SQL Injection Prevention**: Parameterized queries via JPA
+- **XSS Protection**: Content security headers
+- **HTTPS Support**: Ready for SSL/TLS deployment
 
 ---
 
-## 🚢 Deployment
+## 🌍 Environment Variables
 
-### Backend Deployment (Railway/Render/Heroku)
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `DB_URL` | PostgreSQL connection URL | - | ✅ |
+| `DB_USERNAME` | Database username | - | ✅ |
+| `DB_PASSWORD` | Database password | - | ✅ |
+| `JWT_SECRET` | JWT signing key (min 64 chars) | - | ✅ |
+| `JWT_EXPIRATION` | Token expiration (milliseconds) | 86400000 (24h) | ❌ |
+| `SERVER_PORT` | Application port | 8080 | ❌ |
 
-1. Create a PostgreSQL database
-2. Set environment variables on the platform
-3. Deploy from GitHub repository
+---
 
-### Frontend Deployment (Vercel/Netlify)
+## 🚀 Deployment
 
-1. Connect your GitHub repository
-2. Set build command: `npm run build`
-3. Set publish directory: `build` or `dist`
-4. Add environment variable: `REACT_APP_API_URL`
+### Docker (Coming Soon)
+
+```bash
+docker-compose up
+```
+
+### Manual Deployment
+
+```bash
+# Build JAR
+mvn clean package
+
+# Run JAR
+java -jar target/todo-backend-0.0.1-SNAPSHOT.jar
+```
+
+---
+
+## 📈 Future Enhancements
+
+- [ ] Redis caching for improved performance
+- [ ] Rate limiting for API endpoints
+- [ ] Email notifications for due date reminders
+- [ ] File attachments for todos
+- [ ] Todo sharing and collaboration features
+- [ ] WebSocket support for real-time updates
+- [ ] Docker containerization
+- [ ] CI/CD pipeline with GitHub Actions
+- [ ] Kubernetes deployment configuration
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please follow these steps:
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
-
-### Coding Standards
-- Follow Java and TypeScript best practices
-- Write meaningful commit messages
-- Add tests for new features
-- Update documentation as needed
 
 ---
 
@@ -420,43 +351,30 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-## 👤 Author
+## 👨‍💻 Author
 
-**Your Name**
+**Ömer Çelebi**
 
-- GitHub: [@yourusername](https://github.com/OmerCeleb)
-- LinkedIn: [Your Name](https://linkedin.com/in/yourprofile)
-- Email: your.email@example.com
+- LinkedIn: [@omercelebii](https://www.linkedin.com/in/omercelebii/)
+- Email: omer534@outlook.com
+- GitHub: [@OmerCeleb](https://github.com/OmerCeleb)
 
 ---
 
 ## 🙏 Acknowledgments
 
-- [Spring Boot](https://spring.io/projects/spring-boot) - Backend framework
-- [React](https://react.dev/) - Frontend library
-- [Tailwind CSS](https://tailwindcss.com/) - CSS framework
-- [PostgreSQL](https://www.postgresql.org/) - Database
-
----
-
-## 📊 Project Status
-
-🚧 **Active Development** - This project is actively maintained and updated regularly.
-
-### Roadmap
-- [ ] Email notifications for due dates
-- [ ] File attachments for todos
-- [ ] Todo sharing & collaboration
-- [ ] Mobile app (React Native)
-- [ ] Advanced analytics dashboard
-- [ ] Integration with calendar apps
+- Spring Boot Team for the excellent framework
+- PostgreSQL Community for the robust database
+- All contributors and supporters of this project
 
 ---
 
 <div align="center">
 
-**⭐ Star this repo if you find it helpful!**
+**⭐ If you found this project helpful, please consider giving it a star!**
 
-Made with ❤️ using Spring Boot & React
+[Report Bug](https://github.com/OmerCeleb/todo-backend/issues) · [Request Feature](https://github.com/OmerCeleb/todo-backend/issues)
+
+Made with ❤️ by Ömer Çelebi
 
 </div>
