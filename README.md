@@ -4,11 +4,9 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue.svg)](https://www.postgresql.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Test Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/OmerCeleb/todo-backend)
+
 
 > A production-ready RESTful API for todo management with JWT authentication, built with Spring Boot and PostgreSQL.
-
-[🌐 Live Demo](#) | [📚 API Documentation](http://localhost:8080/swagger-ui.html) | [💻 Frontend Repository](https://github.com/OmerCeleb/todo-app-frontend)
 
 ---
 
